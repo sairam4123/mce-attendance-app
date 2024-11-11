@@ -8,6 +8,8 @@ import type { RouterOutputs } from "~/utils/api";
 import { api } from "~/utils/api";
 import { useSignIn, useSignOut, useUser } from "~/utils/auth";
 
+import { verifyInstallation } from "nativewind";
+
 function PostCard(props: {
   post: RouterOutputs["post"]["all"][number];
   onDelete: () => void;

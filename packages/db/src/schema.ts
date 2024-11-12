@@ -1,33 +1,51 @@
-import { relations, sql } from "drizzle-orm";
-import { pgTable, primaryKey } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
+import { relations } from "drizzle-orm";
+import { pgTable, index, primaryKey, pgEnum } from "drizzle-orm/pg-core";
 
-export const Post = pgTable("post", (t) => ({
+export const StudentType = pgEnum("student_type", ["student", "staff", "admin", "rep"]);
+
+export const Class = pgTable("class", (t) => ({
   id: t.uuid().notNull().primaryKey().defaultRandom(),
-  title: t.varchar({ length: 256 }).notNull(),
-  content: t.text().notNull(),
-  createdAt: t.timestamp().defaultNow().notNull(),
-  updatedAt: t
-    .timestamp({ mode: "date", withTimezone: true })
-    .$onUpdateFn(() => sql`now()`),
+  name: t.varchar({ length: 255 }).notNull(),
+  description: t.text(),
 }));
 
-export const CreatePostSchema = createInsertSchema(Post, {
-  title: z.string().max(256),
-  content: z.string().max(256),
-}).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export const Student = pgTable("student", (t) => ({
+  regNo: t.varchar({ length: 255 }).notNull().primaryKey(),
+  name: t.varchar({ length: 255 }).notNull(),
+  userId: t.uuid().notNull().references(() => User.id),
+  class: t.uuid().notNull().references(() => Class.id),
+}));
+
+export const Attendance = pgTable("attendance", (t) => ({
+    userId: t.uuid().notNull().references(() => User.id),
+    date: t.date().notNull(),
+    class: t.uuid().notNull().references(() => Class.id),
+    period: t.integer().notNull().$type<1 | 2 | 3 | 4 | 5 | 6 | 7>(),
+    isPresent: t.boolean().notNull(),
+    rollNo: t.integer().notNull(),
+  }), (attendance) => ({
+    attendanceKey: primaryKey({
+      name: "attendance_pkey",
+      columns: [attendance.userId, attendance.date, attendance.period],
+    }),
+    presentIndex: index("present_idx").on(attendance.isPresent)
+}));
+
+
+export const Subject = pgTable("subject", (t) => ({
+  id: t.uuid().notNull().primaryKey().defaultRandom(),
+  name: t.varchar({ length: 255 }).notNull(),
+  class: t.uuid().notNull().references(() => Class.id),
+}));
+
 
 export const User = pgTable("user", (t) => ({
   id: t.uuid().notNull().primaryKey().defaultRandom(),
   name: t.varchar({ length: 255 }),
-  email: t.varchar({ length: 255 }).notNull(),
+  email: t.varchar({ length: 255 }),
   emailVerified: t.timestamp({ mode: "date", withTimezone: true }),
   image: t.varchar({ length: 255 }),
+  type: t.varchar({ length: 255 }).$type<"student" | "staff" | "admin" | "rep">().references(StudentType),
 }));
 
 export const UserRelations = relations(User, ({ many }) => ({
